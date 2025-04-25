@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+issue=$1
+[[ $issue =~ ^[0-9]+$ ]] || (echo issue $issue is not an integer ; exit 1)
+
+current_branch=$2
+[[ -n $current_branch ]] && [[ -z $(git branch | cut -b 3- | grep ^$current_branch$) ]] && (echo git branch $current_branch does not exist ; exit 1)
+
+commits=$(git log --reverse --grep="^gh-$issue:" --format="%h")
+[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+
+for commit in $commits ; do
+    subject=$(git log $commit -1 --format="%s" | sed -e "s/^gh-$issue:\\s*\\(.*\\)/\\1/")
+
+    branch=$(git branch --points-at $commit | cut -b 3- | grep "^gh-$issue-" | head -1)
+
+    pointer=
+    [[ -n $current_branch ]] && [[ $branch = $current_branch ]] && pointer="-> "
+
+    pr=$(gh pr list -S $commit -s all | cut -f 1)
+    [[ -n $pr ]] && pr="#$pr: "
+
+    echo "- $pointer$pr$subject"
+done

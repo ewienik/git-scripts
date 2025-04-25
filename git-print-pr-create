@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+REMOTE=${REMOTE:-origin}
+
+branch=$1
+[[ -n $branch ]] && [[ -z $(git branch | cut -b 3- | grep ^$branch$) ]] && echo git branch $branch does not exist && exit 1
+
+remote_branch=$REMOTE/$branch
+
+issue=$(echo $branch | sed -e 's/^gh-\([0-9]\+\)-.*$/\1/')
+[[ -z $issue ]] && echo branch $branch does not contain an issue number && exit 1
+
+[[ -z $(git branch -a | cut -b 3- | grep ^remotes/$remote_branch$) ]] && echo git branch remotes/$remote_branch does not exist && exit 1
+
+[[ $(git log $branch -1 --format="%h") = $(git log $branch -1 --format="%h") ]] || echo git branches $branch and $remote_branch do not point to the same commit || exit 1
+
+subject=$(git log $branch -1 --format="%s")
+[[ -z $(echo $subject | grep -e ^gh-$issue:) ]] && echo commit issue is different than branch issue && exit 1
+
+pr=$(gh pr list -H $branch | cut -f 1)
+[[ -n $pr ]] && echo pr $pr already exists for branch $branch && exit 1
+
+reviewers=$2
+[[ -n $reviewers ]] && reviewers="-r $reviewers"
+
+repo=$(git remote show $REMOTE | grep "Push\\s\\+URL:" | sed -e 's/^.*\.com:\([^\/]\+\).*/\1/')
+
+echo "set -e"
+echo "gh pr create -t \"$subject\" -H $repo:$branch -a '@me' $reviewers -d -F - <<BODY"
+git print-pr-desc $branch
+echo "BODY"
