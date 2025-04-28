@@ -12,4 +12,4 @@ git log $branch -1 --format="%b"
 echo "---"
 echo ""
 echo "### List of PRs for #$issue"
-git print-issue-prs $issue $branch
+git gh-print-issue-prs $issue $branch

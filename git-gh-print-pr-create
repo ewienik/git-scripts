@@ -29,5 +29,5 @@ repo=$(git remote show $REMOTE | grep "Push\\s\\+URL:" | sed -e 's/^.*\.com:\([^
 
 echo "set -e"
 echo "gh pr create -t \"$subject\" -H $repo:$branch -a '@me' $reviewers -d -F - <<BODY"
-git print-pr-desc $branch
+git gh-print-pr-desc $branch
 echo "BODY"
