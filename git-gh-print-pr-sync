@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -e
+
+REMOTE=${REMOTE:-origin}
+
+branch=$1
+[[ -n $branch ]] && [[ -z $(git branch | cut -b 3- | grep ^$branch$) ]] && echo git branch $branch does not exist && exit 1
+
+remote_branch=$REMOTE/$branch
+
+issue=$(echo $branch | sed -e 's/^gh-\([0-9]\+\)-.*$/\1/')
+[[ -z $issue ]] && echo branch $branch does not contain an issue number && exit 1
+
+[[ -z $(git branch -a | cut -b 3- | grep ^remotes/$remote_branch$) ]] && echo git branch remotes/$remote_branch does not exist && exit 1
+
+commit=$(git log $branch -1 --format="%h")
+
+subject=$(git log $branch -1 --format="%s")
+[[ -z $(echo $subject | grep -e ^gh-$issue:) ]] && echo commit issue is different than branch issue && exit 1
+
+pr=$(gh pr list -H $branch | cut -f 1)
+[[ -z $pr ]] && echo branch $branch does not have a pr && exit 1
+
+range_diff=$(git range-diff $remote_branch~1..$remote_branch $branch~1..$branch)
+
+echo "set -e"
+echo ""
+echo "git push $REMOTE $branch --force-with-lease"
+echo ""
+echo "gh pr comment $pr -F - <<BODY"
+echo "Changelog for $commit"
+echo "- "
+echo ""
+echo "<details>"
+echo "<summary>range diff</summary>"
+echo ""
+echo '```'
+echo $range_diff
+echo '```'
+echo "BODY"
+echo ""
+echo "gh pr edit $pr -t \"$subject\" -F - <<BODY"
+git gh-print-pr-desc $branch
+echo "BODY"
