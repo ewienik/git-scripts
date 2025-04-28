@@ -28,6 +28,6 @@ reviewers=$2
 repo=$(git remote show $REMOTE | grep "Push\\s\\+URL:" | sed -e 's/^.*\.com:\([^\/]\+\).*/\1/')
 
 echo "set -e"
-echo "gh pr create -t \"$subject\" -H $repo:$branch -a '@me' $reviewers -d -F - <<BODY"
+echo "gh pr create -t \"$subject\" -H $repo:$branch -a '@me' $reviewers -d -F - <<\\BODY"
 git gh-print-pr-desc $branch
 echo "BODY"

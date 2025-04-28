@@ -28,7 +28,7 @@ echo "set -e"
 echo ""
 echo "git push $REMOTE $branch --force-with-lease"
 echo ""
-echo "gh pr comment $pr -F - <<BODY"
+echo "gh pr comment $pr -F - <<\\BODY"
 echo "Changelog for $commit"
 echo "- "
 echo ""
@@ -40,6 +40,6 @@ echo $range_diff
 echo '```'
 echo "BODY"
 echo ""
-echo "gh pr edit $pr -t \"$subject\" -F - <<BODY"
+echo "gh pr edit $pr -t \"$subject\" -F - <<\\BODY"
 git gh-print-pr-desc $branch
 echo "BODY"
