@@ -24,7 +24,9 @@ for commit in $commits ; do
 
     # find the PR corresponding to the specific commit
     pr=
-    for pr in $(gh pr list -S $commit -s all | cut -f 1) ; do
+    prs=
+    [[ -z $pointer ]] && prs=$(gh pr list -S $commit -s all | cut -f 1)
+    for pr in $prs; do
         check=$(gh pr view $pr --json commits | jq -r '.commits[-1].oid' | cut -c1-7)
         [[ $check = $commit ]] && break
     done
