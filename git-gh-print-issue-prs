@@ -12,15 +12,25 @@ commits=$(git log --reverse --grep="^gh-$issue:" --format="%h")
 [[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
 
 for commit in $commits ; do
+    # prepare a subject line without an issue prefix
     subject=$(git log $commit -1 --format="%s" | sed -e "s/^gh-$issue:\\s*\\(.*\\)/\\1/")
 
+    # get a branch assosiated with the commit (it should starts with 'gh-$issue-' prefix)
     branch=$(git branch --points-at $commit | cut -b 3- | grep "^gh-$issue-" | head -1)
 
+    # prepare a pointer for the current branch
     pointer=
     [[ -n $current_branch ]] && [[ $branch = $current_branch ]] && pointer="-> "
 
-    pr=$(gh pr list -S $commit -s all | cut -f 1)
-    [[ -n $pr ]] && pr="#$pr: "
+    # find the PR corresponding to the specific commit
+    pr=
+    for pr in $(gh pr list -S $commit -s all | cut -f 1) ; do
+        check=$(gh pr view $pr --json commits | jq -r '.commits[-1].oid' | cut -c1-7)
+        [[ $check = $commit ]] && break
+    done
+
+    # if there is a PR won't use subject
+    [[ -n $pr ]] && pr="#$pr" && subject=""
 
     echo "- $pointer$pr$subject"
 done
