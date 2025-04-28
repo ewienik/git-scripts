@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e
+
+issue=$1
+[[ $issue =~ ^[0-9]+$ ]] || (echo issue $issue is not an integer ; exit 1)
+
+echo "set -e"
+echo ""
+echo "# add a comment with current PRs to the issue #$issue"
+echo "gh issue comment $issue -F - <<\\BODY"
+echo "Current list of PRs"
+git gh-print-issue-prs $issue
+echo "BODY"
+echo ""
+
+commits=$(git log --reverse --grep="^gh-$issue:" --format="%h")
+[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+
+for commit in $commits ; do
+    # get a branch assosiated with the commit (it should starts with 'gh-$issue-' prefix)
+    branch=$(git branch --points-at $commit | cut -b 3- | grep "^gh-$issue-" | head -1)
+
+    # find the PR corresponding to the specific commit
+    pr=
+    for pr in $(gh pr list -S $commit -s open | cut -f 1); do
+        check=$(gh pr view $pr --json commits | jq -r '.commits[-1].oid' | cut -c1-7)
+        [[ $check = $commit ]] && break
+    done
+
+    [[ -z $pr ]] && continue
+
+    subject=$(git log $branch -1 --format="%s")
+
+    echo "# sync a description of the PR $pr"
+    echo "gh pr edit $pr -t \"$subject\" -F - <<\\BODY"
+    git gh-print-pr-desc $branch
+    echo "BODY"
+done
+
