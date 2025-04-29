@@ -22,8 +22,6 @@ subject=$(git log $branch -1 --format="%s")
 pr=$(gh pr list -H $branch | cut -f 1)
 [[ -z $pr ]] && echo branch $branch does not have a pr && exit 1
 
-range_diff=$(git range-diff $remote_branch~1..$remote_branch $branch~1..$branch)
-
 echo "set -e"
 echo ""
 echo "git push $REMOTE $branch --force-with-lease"
@@ -36,7 +34,7 @@ echo "<details>"
 echo "<summary>range diff</summary>"
 echo ""
 echo '```'
-echo $range_diff
+git range-diff $remote_branch~1..$remote_branch $branch~1..$branch
 echo '```'
 echo "BODY"
 echo ""
