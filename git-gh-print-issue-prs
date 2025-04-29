@@ -2,6 +2,8 @@
 
 set -e
 
+REMOTE=${REMOTE:-origin}
+
 issue=$1
 [[ $issue =~ ^[0-9]+$ ]] || (echo issue $issue is not an integer ; exit 1)
 
@@ -21,6 +23,10 @@ for commit in $commits ; do
     # prepare a pointer for the current branch
     pointer=
     [[ -n $current_branch ]] && [[ $branch = $current_branch ]] && pointer="-> "
+
+    # if there is a remote branch check its commit
+    remote_branch=$REMOTE/$branch
+    [[ -n $(git branch -a | cut -b 3- | grep ^remotes/$remote_branch$) ]] && commit=$(git log $remote_branch -1 --format="%h")
 
     # find the PR corresponding to the specific commit
     pr=
