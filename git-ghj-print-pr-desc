@@ -13,5 +13,5 @@ issue=$(echo $branch | sed -e 's/^\([a-z]\+-[0-9]\+\)-.*$/\1/')
 git log $branch -1 --format="%b"
 echo "---"
 echo ""
-echo "### List of PRs for [$issue]($JIRA_URL/browse/$issue)"
+echo "### List of PRs for [${issue^^}]($JIRA_URL/browse/${issue^^})"
 git ghj-print-issue-prs $issue $branch
