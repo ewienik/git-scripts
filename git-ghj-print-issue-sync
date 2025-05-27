@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -e
+
+JIRA_CLI=${JIRA_CLI:-jira-cli}
+GITHUB_CLI=${GITHUB_CLI:-gh}
+
+issue=$1
+[[ $issue =~ ^[a-z]+-[0-9]+$ ]] || (echo issue $issue is not an jira number with a lower case ; exit 1)
+
+echo "set -e"
+echo ""
+echo "# add a comment with current PRs to the issue $issue"
+echo "$JIRA_CLI issue comment add $issue --template - <<\\BODY"
+echo "Current list of PRs"
+git ghj-print-issue-prs $issue
+echo "BODY"
+echo ""
+
+commits=$(git log --reverse --grep="\\b$issue\\b" -i --format="%h")
+[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+
+for commit in $commits ; do
+    # get a branch assosiated with the commit (it should starts with '$issue-' prefix)
+    branch=$(git branch --points-at $commit | cut -b 3- | grep "^$issue-" | head -1)
+
+    # find the PR corresponding to the specific commit
+    pr=
+    for pr in $($GITHUB_CLI pr list -S $commit -s open | cut -f 1); do
+        check=$($GITHUB_CLI pr view $pr --json commits | jq -r '.commits[-1].oid' | cut -c1-7)
+        [[ $check = $commit ]] && break
+    done
+
+    [[ -z $pr ]] && continue
+
+    subject=$(git log $branch -1 --format="%s")
+
+    echo "# sync a description of the PR $pr"
+    echo "$GITHUB_CLI pr edit $pr -t \"$subject\" -F - <<\\BODY"
+    git ghj-print-pr-desc $branch
+    echo "BODY"
+done
+

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -e
+
+REMOTE=${REMOTE:-origin}
+JIRA_CLI=${JIRA_CLI:-jira-cli}
+GITHUB_CLI=${GITHUB_CLI:-gh}
+
+issue=$1
+[[ $issue =~ ^[a-z]+-[0-9]+$ ]] || (echo issue $issue is not an jira number with a lower case ; exit 1)
+
+[[ -z $($JIRA_CLI issue view $issue 2>/dev/null) ]] && (echo issue $issue does not exist ; exit 1)
+
+current_branch=$2
+[[ -n $current_branch ]] && [[ -z $(git branch | cut -b 3- | grep -i ^$current_branch$) ]] && (echo git branch $current_branch does not exist ; exit 1)
+
+commits=$(git log --reverse --grep="\\b$issue\\b" -i --format="%h")
+[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+
+github_url=$($GITHUB_CLI repo view --json url -q '.url')
+
+for commit in $commits ; do
+    # prepare a subject line
+    subject=$(git log $commit -1 --format="%s")
+
+    # get a branch assosiated with the commit (it should starts with '$issue-' prefix)
+    branch=$(git branch --points-at $commit | cut -b 3- | grep -i "^$issue-" | head -1)
+
+    # prepare a pointer for the current branch
+    pointer=
+    [[ -n $current_branch ]] && [[ $branch = $current_branch ]] && pointer="-> "
+
+    # if there is a remote branch check its commit
+    remote_branch=$REMOTE/$branch
+    [[ -n $(git branch -a | cut -b 3- | grep -i ^remotes/$remote_branch$) ]] && commit=$(git log $remote_branch -1 --format="%h")
+
+    # find the PR corresponding to the specific commit
+    pr=
+    prs=
+    [[ -z $pointer ]] && prs=$($GITHUB_CLI pr list -S $commit -s all | cut -f 1)
+    for pr in $prs; do
+        check=$($GITHUB_CLI pr view $pr --json commits | jq -r '.commits[-1].oid' | cut -c1-7)
+        [[ $check = $commit ]] && break
+    done
+
+    # if there is a PR won't use a subject
+    [[ -n $current_branch ]] && [[ -n $pr ]] && pr="#$pr" && subject=""
+
+    [[ -n $current_branch ]] && echo "- $pointer$pr$subject"
+    [[ -z $current_branch ]] && [[ -n $pr ]] && echo "- [$subject]($github_url/pull/$pr)"
+    [[ -z $current_branch ]] && [[ -z $pr ]] && echo "- $subject"
+done

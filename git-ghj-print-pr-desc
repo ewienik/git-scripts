@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+JIRA_URL=${JIRA_URL:-https://scylladb.atlassian.net}
+
+branch=$1
+[[ -n $branch ]] && [[ -z $(git branch | cut -b 3- | grep ^$branch$) ]] && echo git branch $branch does not exist && exit 1
+
+issue=$(echo $branch | sed -e 's/^\([a-z]\+-[0-9]\+\)-.*$/\1/')
+[[ -z $issue ]] && echo branch $branch does not contain an issue number && exit 1
+
+git log $branch -1 --format="%b"
+echo "---"
+echo ""
+echo "### List of PRs for [$issue]($JIRA_URL/browse/$issue)"
+git ghj-print-issue-prs $issue $branch
