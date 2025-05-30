@@ -50,3 +50,6 @@ for commit in $commits ; do
     [[ -z $current_branch ]] && [[ -n $pr ]] && echo "- [$subject]($github_url/pull/$pr)"
     [[ -z $current_branch ]] && [[ -z $pr ]] && echo "- $subject"
 done
+
+echo ""
+
