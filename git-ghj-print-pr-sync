@@ -24,6 +24,23 @@ subject=$(git log $branch -1 --format="%s")
 pr=$($GITHUB_CLI pr list -H $branch | cut -f 1)
 [[ -z $pr ]] && echo branch $branch does not have a pr && exit 1
 
+count_commits() {
+  local branch=$1
+  local count=1
+  local commit=$(git log $branch -1 --format="%h")
+  while true; do
+      local parents=($(git log $commit -1 --format="%p"))
+      [[ ${#parents[@]} -eq 1 ]] || break
+      commit=${parents[0]}
+      [[ -z $(git log $commit -1 --grep="\\b$issue\\b" -i) ]] && break
+      count=$((count + 1))
+  done
+  echo $count
+}
+
+remote_branch_count=$(count_commits $remote_branch)
+branch_count=$(count_commits $branch)
+
 echo "set -e"
 echo ""
 echo "git push $REMOTE $branch --force-with-lease"
@@ -36,9 +53,13 @@ echo "<details>"
 echo "<summary>range diff</summary>"
 echo ""
 echo '```'
-git range-diff $remote_branch~1..$remote_branch $branch~1..$branch
+git range-diff $remote_branch~$remote_branch_count..$remote_branch $branch~$branch_count..$branch
 echo '```'
 echo "BODY"
+
+# If the are multiple commits we will not update the PR description
+[[ $branch_count -gt 1 || $remote_branch_count -gt 1 ]] && exit 0
+
 echo ""
 echo "$GITHUB_CLI pr edit $pr -t \"$subject\" -F - <<\\BODY"
 git ghj-print-pr-desc $branch
