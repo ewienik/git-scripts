@@ -30,9 +30,21 @@ count_commits() {
   local commit=$(git log $branch -1 --format="%h")
   while true; do
       local parents=($(git log $commit -1 --format="%p"))
+
+      # if there are more than one parent stop counting
       [[ ${#parents[@]} -eq 1 ]] || break
+
       commit=${parents[0]}
+
+      # if there are branches pointing at the commit stop counting
+      [[ -n $(git branch -a --points-at $commit) ]] && break
+
+      # if some remote branches contain the commit stop counting
+      [[ -n $(git branch -a --contains $commit | grep "remotes/") ]] && break
+
+      # if the commit does not contain the issue number stop counting
       [[ -z $(git log $commit -1 --grep="\\b$issue\\b" -i) ]] && break
+
       count=$((count + 1))
   done
   echo $count
