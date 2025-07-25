@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+branch=$1
+[[ -n $branch ]] && [[ -z $(git branch -a | cut -b 3- | grep ^$branch$) ]] && echo git branch $branch does not exist && exit 1
+
+count=1
+commit=$(git log $branch -1 --format="%h")
+first_branches=$(git branch -a --contains $commit)
+while true; do
+  parents=($(git log $commit -1 --format="%p"))
+
+  # if there are more than one parent stop counting
+  [[ ${#parents[@]} -eq 1 ]] || break
+
+  commit=${parents[0]}
+
+  # if there are branches pointing at the commit stop counting
+  [[ -n $(git branch -a --points-at $commit) ]] && break
+
+  # if commit contains other branches than the first commit
+  [[ $(git branch -a --contains $commit) != $first_branches ]] && break
+
+  count=$((count + 1))
+done
+
+echo $count

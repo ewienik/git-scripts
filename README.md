@@ -28,10 +28,8 @@ Scripts used for GitHub and Jira: `git-ghj-*`. Scripts use GitHub CLI
 (`gh`) and Jira CLI (`jira-cli`) to create/modify pull requests and issues.
 
 There should be a Jira issue, eg `JIRA-123`. You should name branches with
-`jira-123-` prefix. In the commit body you should reference the Jira issue
-`JIRA-123`. Default remote is `origin`. The number of commits per patch is
-calculated automatically based on branch names and jira tags in the commit
-description body.
+`jira-123-` prefix. Default remote is `origin`. The number of commits per patch is
+calculated automatically based on issue tag in branch names.
 
 #### Creating a pull request
 

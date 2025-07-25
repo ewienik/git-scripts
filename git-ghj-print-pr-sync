@@ -17,41 +17,13 @@ issue=$(echo $branch | sed -e 's/^\([a-z]\+-[0-9]\+\)-.*$/\1/')
 
 commit=$(git log $branch -1 --format="%h")
 
-[[ -z $(git log $branch -1 --grep="\\b$issue\\b" -i) ]] && echo commit description does not contain issue number && exit 1
-
-subject=$(git log $branch -1 --format="%s")
+# [[ -z $(git log $branch -1 --grep="\\b$issue\\b" -i) ]] && echo commit description does not contain issue number && exit 1
 
 pr=$($GITHUB_CLI pr list -H $branch | cut -f 1)
 [[ -z $pr ]] && echo branch $branch does not have a pr && exit 1
 
-count_commits() {
-  local branch=$1
-  local count=1
-  local commit=$(git log $branch -1 --format="%h")
-  while true; do
-      local parents=($(git log $commit -1 --format="%p"))
-
-      # if there are more than one parent stop counting
-      [[ ${#parents[@]} -eq 1 ]] || break
-
-      commit=${parents[0]}
-
-      # if there are branches pointing at the commit stop counting
-      [[ -n $(git branch -a --points-at $commit) ]] && break
-
-      # if some remote branches contain the commit stop counting
-      [[ -n $(git branch -a --contains $commit | grep "remotes/") ]] && break
-
-      # if the commit does not contain the issue number stop counting
-      [[ -z $(git log $commit -1 --grep="\\b$issue\\b" -i) ]] && break
-
-      count=$((count + 1))
-  done
-  echo $count
-}
-
-remote_branch_count=$(count_commits $remote_branch)
-branch_count=$(count_commits $branch)
+remote_branch_count=$(git count-commits remotes/$remote_branch)
+branch_count=$(git count-commits $branch)
 
 echo "set -e"
 echo ""
@@ -70,9 +42,11 @@ echo '```'
 echo "BODY"
 
 # If the are multiple commits we will not update the PR description
-[[ $branch_count -gt 1 || $remote_branch_count -gt 1 ]] && exit 0
+#[[ $branch_count -gt 1 || $remote_branch_count -gt 1 ]] && exit 0
+
+subject=$(gh pr view $pr --json title -q '.title')
 
 echo ""
 echo "$GITHUB_CLI pr edit $pr -t \"$subject\" -F - <<\\BODY"
-git ghj-print-pr-desc $branch
+gh pr view $pr --json body -q '.body' | git ghj-print-pr-desc $branch -
 echo "BODY"

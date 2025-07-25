@@ -14,8 +14,7 @@ issue=$1
 current_branch=$2
 [[ -n $current_branch ]] && [[ -z $(git branch | cut -b 3- | grep -i ^$current_branch$) ]] && (echo git branch $current_branch does not exist ; exit 1)
 
-commits=$(git log --reverse --grep="\\b$issue\\b" -i --format="%h")
-[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+commits=$(git list-commits $issue)
 
 github_url=$($GITHUB_CLI repo view --json url -q '.url')
 

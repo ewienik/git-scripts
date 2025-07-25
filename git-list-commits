@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+issue=$1
+[[ $issue =~ ^[a-z]+-[0-9]+$ ]] || (echo issue $issue is not an jira number with a lower case ; exit 1)
+
+commits_descr=$(git log --reverse --grep="\\b$issue\\b" -i --format="%h")
+commits_branches=$(git branch -a | cut -b 3- | grep -i "^$issue-" | xargs -L 1 git log -1 --format="%h")
+commits=$((echo -e "$commits_descr" && echo -e "$commits_branches") | sort -u)
+[[ -z $commits ]] && (echo no commits for the issue $issue ; exit 0)
+git rev-list --topo-order $(echo "$commits") | grep $(echo "$commits" | sed -e 's/^\(.\+\)$/-e \1/') --max-count $(echo "$commits" | sed '/^\s*$/d' | wc -l) | tac
