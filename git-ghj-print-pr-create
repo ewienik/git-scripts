@@ -17,8 +17,6 @@ issue=$(echo $branch | sed -e 's/^\([a-z]\+-[0-9]\+\)-.*$/\1/')
 
 [[ $(git log $branch -1 --format="%h") = $(git log $branch -1 --format="%h") ]] || echo git branches $branch and $remote_branch do not point to the same commit || exit 1
 
-[[ -z $(git log $branch -1 --grep="\\b$issue\\b" -i) ]] && echo commit description does not contain issue number && exit 1
-
 subject=$(git log $branch -1 --format="%s")
 
 pr=$($GITHUB_CLI pr list -H $branch | cut -f 1)
