@@ -8,6 +8,8 @@ GITHUB_CLI=${GITHUB_CLI:-gh}
 branch=$1
 [[ -n $branch ]] && [[ -z $(git branch | cut -b 3- | grep ^$branch$) ]] && echo git branch $branch does not exist && exit 1
 
+remote_branch_count=$2
+
 remote_branch=$REMOTE/$branch
 
 issue=$(echo $branch | sed -e 's/^\([a-z]\+-[0-9]\+\)-.*$/\1/')
@@ -20,8 +22,8 @@ commit=$(git log $branch -1 --format="%h")
 pr=$($GITHUB_CLI pr list -H $branch | cut -f 1)
 [[ -z $pr ]] && echo branch $branch does not have a pr && exit 1
 
-remote_branch_count=$(git count-commits remotes/$remote_branch)
 branch_count=$(git count-commits $branch)
+[[ -z $remote_branch_count ]] && remote_branch_count=$branch_count
 
 echo "set -e"
 echo ""
